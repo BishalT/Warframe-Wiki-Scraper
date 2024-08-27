@@ -1,0 +1,92 @@
+{
+  "weapons": [
+    {
+      "name": "AX-52",
+      "mastery": "12",
+      "type": "Rifle",
+      "max": "30",
+      "slot": "Primary",
+      "acqText": "No available source for the item yet",
+      "acqTable": [],
+      "foundryTable": []
+    },
+    {
+      "name": "Acceltra",
+      "mastery": "8",
+      "type": "Rifle",
+      "max": "30",
+      "slot": "Primary",
+      "acqText": "Acceltra's main blueprint can be obtained from defeating Demolisher Infested on the Dark Sector mission Ur, Uranus.",
+      "acqTable": [
+        [
+          "Blueprint",
+          "Demolisher Charger",
+          "1.25%",
+          "~ 80 Kills",
+          "549 ± 183 Kills"
+        ],
+        [
+          "Blueprint",
+          "Demolisher Juggernaut",
+          "1.25%",
+          "~ 80 Kills",
+          "549 ± 183 Kills"
+        ],
+        [
+          "Blueprint",
+          "Demolisher Thrasher",
+          "1.25%",
+          "~ 80 Kills",
+          "549 ± 183 Kills"
+        ],
+        [
+          "Blueprint",
+          "Demolisher Boiler",
+          "1.25%",
+          "~ 80 Kills",
+          "549 ± 183 Kills"
+        ]
+      ],
+      "foundryTable": [
+        "Credits: 25000",
+        "Neurodes: 4",
+        "Hexenon: 200",
+        "Plastids: 925",
+        "Nano Spores: 8000"
+      ]
+    },
+    {
+      "name": "Acceltra_Prime",
+      "mastery": "14",
+      "type": "Rifle",
+      "max": "30",
+      "slot": "Primary",
+      "acqText": "",
+      "acqTable": [
+        [
+          "Stock",
+          "Axi A18 Rare"
+        ],
+        [
+          "Barrel",
+          "Neo A13 Rare Meso A5 Rare (V) Neo A12 Rare (V)"
+        ],
+        [
+          "Receiver",
+          "Axi O6 Uncommon Neo F3 Uncommon (V) Neo O2 Uncommon (V)"
+        ],
+        [
+          "Blueprint",
+          "Meso N17 Common Neo Z11 Common Lith C11 Common (V) Meso W5 Common (V)"
+        ]
+      ],
+      "foundryTable": [
+        "Credits: 15000",
+        "Prime Barrel: 1",
+        "Prime Receiver: 1",
+        "Prime Stock: 1",
+        "Orokin Cell: 10"
+      ]
+    }
+  ]
+}
