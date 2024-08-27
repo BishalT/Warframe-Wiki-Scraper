@@ -42,7 +42,20 @@ def _getAcquisitionPrimeGrid(soup):
     for idx, elem in enumerate(tableInfo):
         cTableHeader: str = tableHeader[idx].get_text().strip()
         cTableText: str = elem.get_text().replace(u'\xa0', u' ').strip()
-        aquInfo.append([cTableHeader, cTableText])
+
+        stxt = cTableText.split(" ")
+        i = 0
+        relics = []
+        while i < len(stxt):
+            if i + 3 < len(stxt) and stxt[i + 3] == '(V)':
+                break
+            relicInfo = " ".join(stxt[i:i+3])
+            i += 3
+            relics.append(relicInfo)
+        
+        cTableTextJoined = ",".join(relics)
+        aquInfo.append([cTableHeader, cTableTextJoined])
+        
     return aquInfo
 
 def _getFoundryTable(soup):
