@@ -39,7 +39,9 @@ def get_acquisition_text(soup):
     """Get acquisition text from the HTML table."""
     aqu_text = soup.find(name="span", id="Acquisition")
     try:
-        aqu_text = soup.find(name="span", id="Acquisition").parent.find_next_sibling("p").get_text().strip()
+        stripped_text = soup.find(name="span", id="Acquisition").parent.find_next_sibling("p").get_text().strip()
+        split_text = (re.sub(r"({.*})", "", stripped_text).split(" "))
+        aqu_text = " ".join(map(lambda x: x.strip(), split_text))
     except Exception as e:
         print("Error getting acquisition text: ", e)
         aqu_text = "No available source for the item yet"
@@ -71,16 +73,20 @@ def get_foundry_table(soup):
     """Get foundry table from the HTML table."""
     t = soup.find(name="table", class_="foundrytable")
     if not t:
+        print("No foundry table found")
         return []
     table = soup.find(name="table", class_="foundrytable").find_all("tr")
-    resources = soup.find(name="table", class_="foundrytable").find_all(name="span", attrs={"data-param2": "Resources"})
+    resources_row = soup.find(name="table", class_="foundrytable").find_all("tr")
+    resources_name_row = resources_row[1].find_all(name="span", attrs={"data-param2": "Resources"})
     foundry_map = {}
     resource_list = []
     resource_count = []
 
-    for i in resources:
+    for i in resources_name_row:
         resource = i['data-param']
         if resource == "Platinum":
+            continue
+        if resource == "Standing":
             continue
         resource_list.append(resource)
     
@@ -103,7 +109,6 @@ def get_foundry_table(soup):
         foundry_map[elem] = resource_count[i]
 
     foundry_map_list = [str(x + ": " + foundry_map[x]) for x in foundry_map]
-    print(foundry_map_list)
     return foundry_map_list
     
 
@@ -136,7 +141,7 @@ def get_general_information(container):
 
 def get_weapon_details(weapon_name, body) -> Weapon:
     """Generate weapon details from the HTML table."""
-    reg_table = body.find("table",{"class": "foundrytable"})
+    reg_table = body.find("table",{"class": "acquisition-table"})
     acq_table = []
 
     if reg_table:
@@ -146,12 +151,16 @@ def get_weapon_details(weapon_name, body) -> Weapon:
         acq_table = get_acquisition_prime_grid(body)
     else:
         print("NO ROWS")
+
+    # print("acq_table: ", acq_table)
     
     acq_text = get_acquisition_text(body)
+    # print("acq_text: ", acq_text)
     foundry_table = get_foundry_table(body)
+    # print("foundry_table: ", foundry_table)
     general_info = body.find("div", {"class": "infobox"})
     [mastery, weapon_type, max_rank, slot] = get_general_information(general_info)
-    
+    # print("mastery: ", mastery, "weapon_type: ", weapon_type, "max_rank: ", max_rank, "slot: ", slot)
     new_wep = Weapon(weapon_name, mastery, weapon_type, max_rank, slot, acq_text, acq_table, foundry_table)
     return new_wep
 
@@ -164,21 +173,22 @@ def send_request(weapon_name: str) -> BeautifulSoup:
 
 def main():
     """Main function to scrape weapon data and generate JSON output file."""
-    with open("../lists/weapons_list.txt", encoding='utf-8') as z:
-        with open("../data/weapons.json", "w", encoding='utf-8') as f:
+    with open("./lists/weapons_list.txt", encoding='utf-8') as z:
+        with open("./data/weapons.json", "w", encoding='utf-8') as f:
             weapon_list = list(z.read().split(","))
             weapon_json = {"weapons" : []}
-            for i in range(1, 2):
-                weapon_name = weapon_list[i]
-                print(weapon_name)
+            for i, weapon_name in enumerate(weapon_list):
+                print(f"Processing weapon {i+1} of {len(weapon_list)}: {weapon_name}")
                 try:
                     r = send_request(weapon_name)
                     new_wep = get_weapon_details(weapon_name, r)
                     json_dump = json.loads(json.dumps(vars(new_wep)))
                     weapon_json["weapons"].append(json_dump)
                 except Exception as error:
-                    print("GOOFED: ", error)
-                    continue
+                    print("Error: ", error)
+                    new_wep = Weapon(weapon_name, "-1", "-1", "-1", "-1", "-1", "-1", "-1")
+                    json_dump = json.loads(json.dumps(vars(new_wep)))
+                    weapon_json["weapons"].append(json_dump)
             json.dump(weapon_json, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
