@@ -1,4 +1,4 @@
-# Warframe Weapon Data Scraper
+# Warframe Data Scraper
 
 A Python script that scrapes detailed weapon information from the Warframe Wiki and generates structured JSON data.
 
@@ -9,6 +9,10 @@ This tool automatically extracts weapon information from the [Warframe Wiki](htt
 - Acquisition methods
 - Foundry requirements
 - Prime part drop locations (for Prime weapons)
+
+### Coming Soon:
+- Prime Grid
+- Warframes Data
 
 ## Prerequisites
 
@@ -33,7 +37,7 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-python3 scrape_weapons.py
+python3 src/scrape_weapons.py
 ```
 
 ## Output
