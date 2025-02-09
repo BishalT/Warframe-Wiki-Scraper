@@ -1,20 +1,25 @@
-import requests
+"""Script for scraping detailed weapon information from Warframe Wiki and generating JSON data."""
+
 import json
 import re
+import requests
 from bs4 import BeautifulSoup
 
 class Weapon:
-    def __init__(self, name, mastery, type, max, slot, acqText, acqTable, foundryTable) -> None:
+    """Class representing a weapon in Warframe."""
+    def __init__(self, name, mastery, weapon_type, max_rank, slot, acq_text, acq_table, foundry_table) -> None:
+        """Initialize a Weapon object."""
         self.name = name
         self.mastery: str = mastery
-        self.type: str = type
-        self.max: str = max
+        self.weapon_type: str = weapon_type
+        self.max_rank: str = max_rank
         self.slot: str = slot
-        self.acqText: str = acqText
-        self.acqTable = list(acqTable)
-        self.foundryTable = list(foundryTable)
+        self.acq_text: str = acq_text
+        self.acq_table = acq_table
+        self.foundry_table = foundry_table
 
-def _getAcquisitionRows(arr):
+def get_acquisition_rows(arr):
+    """Get acquisition rows from the HTML table."""
     res = []
     for i in arr:
         r = []
@@ -26,56 +31,54 @@ def _getAcquisitionRows(arr):
         res.append(r)
     return res
 
-def _getAcquisitionText(soup):
-    aquText = soup.find(name="span", id="Acquisition")
+def get_acquisition_text(soup):
+    """Get acquisition text from the HTML table."""
+    aqu_text = soup.find(name="span", id="Acquisition")
     try:
-        aquText = soup.find(name="span", id="Acquisition").parent.find_next_sibling("p").get_text().strip()
-    except:
-        aquText = "No available source for the item yet"
+        aqu_text = soup.find(name="span", id="Acquisition").parent.find_next_sibling("p").get_text().strip()
+    except Exception as e:
+        print("Error getting acquisition text: ", e)
+        aqu_text = "No available source for the item yet"
+    return aqu_text
 
-    return aquText
+def get_acquisition_prime_grid(soup):
+    """Get acquisition prime grid from the HTML table."""
+    table_headers = soup.find(name="table", class_="article-table").find_all("th")
+    table_info = soup.find(name="table", class_="article-table").find_all(name="td")
+    aqu_info = []
+    for idx, elem in enumerate(table_info):
+        c_table_header: str = table_headers[idx].get_text().strip()
+        c_table_text: str = elem.get_text().replace(u'\xa0', u' ').strip()
 
-def _getAcquisitionPrimeGrid(soup):
-    tableHeader = soup.find(name="table", class_="article-table").find_all("th")
-    tableInfo = soup.find(name="table", class_="article-table").find_all(name="td")
-    aquInfo = []
-    for idx, elem in enumerate(tableInfo):
-        cTableHeader: str = tableHeader[idx].get_text().strip()
-        cTableText: str = elem.get_text().replace(u'\xa0', u' ').strip()
-
-        stxt = cTableText.split(" ")
+        stxt = c_table_text.split(" ")
         i = 0
         relics = []
         while i < len(stxt):
             if i + 3 < len(stxt) and stxt[i + 3] == '(V)':
                 break
-            relicInfo = " ".join(stxt[i:i+3])
+            relic_info = " ".join(stxt[i:i+3])
             i += 3
-            relics.append(relicInfo)
-        
-        cTableTextJoined = ",".join(relics)
-        aquInfo.append([cTableHeader, cTableTextJoined])
-        
-    return aquInfo
+            relics.append(relic_info)
+        c_table_text_joined = ",".join(relics)
+        aqu_info.append([c_table_header, c_table_text_joined])
+    return aqu_info
 
-def _getFoundryTable(soup):
+def get_foundry_table(soup):
+    """Get foundry table from the HTML table."""
     t = soup.find(name="table", class_="foundrytable")
-    
     if not t:
         return []
-    
     table = soup.find(name="table", class_="foundrytable").find_all("tr")
     resources = soup.find(name="table", class_="foundrytable").find_all(name="span", attrs={"data-param2": "Resources"})
-
-    foundryMap = {}
-    resourceList = []
-    resourceCount = []
+    foundry_map = {}
+    resource_list = []
+    resource_count = []
 
     for i in resources:
         resource = i['data-param']
         if resource == "Platinum":
             continue
-        resourceList.append(resource)
+        resource_list.append(resource)
     
     for idx, i in enumerate(table[1]):
         text = i.get_text().strip()
@@ -89,66 +92,90 @@ def _getFoundryTable(soup):
         if not val:
             continue
             
-        resourceCount.append(val)
+        resource_count.append(val)
 
-    for i in range(len(resourceList)):
-        foundryMap[resourceList[i]] = resourceCount[i]
+    for i, elem in enumerate(resource_list):
+        foundry_map[elem] = resource_count[i]
 
-    foundryMapList = [str(x + ": " + foundryMap[x]) for x in foundryMap.keys()]   
-    return foundryMapList
+    foundry_map_list = [str(x + ": " + foundry_map[x]) for x in foundry_map]
+    print(foundry_map_list)
+    return foundry_map_list
     
 
-def _getGeneralInformation(container):
-    mastery : str       = container.find(attrs={"data-source": "Mastery"}).find(name='div').get_text()
-    type : str          = container.find(attrs={"data-source": "Class"}).find(name='div').get_text()
-    maxRank  : str      = container.find(attrs={"data-source": "MaxRank"}).find(name='div').get_text()
-    slot : str          = container.find(attrs={"data-source": "Slot"}).find(name='div').get_text()
+def find_label(container, label):
+    """Find a label in the HTML table."""
+    divs = container.find_all("div", {"class": "label left"})
+    for div in divs:
+        a_tag = div.find("a", {"title": label})
+        if a_tag:
+            return div.find_next_sibling("div", {"class": "value right"}).get_text().strip()
+    return None
 
-    return [mastery, type, maxRank, slot]
+def find_max_rank(container):
+    """Find the max rank in the HTML table."""
+    divs = container.find_all("div", {"class": "label left"})
+    for div in divs:
+        if div.get_text().strip() == "Max Rank":
+            return div.find_next_sibling("div", {"class": "value right"}).get_text().strip()
+    return None
+
+def get_general_information(container):
+    """Get general information from the HTML table."""
+
+    mastery : str       = find_label(container, "Mastery Rank")
+    weapon_type : str   = find_label(container, "Mod/Compatibility")
+    slot : str          = find_label(container, "Weapons")
+    max_rank : str      = find_max_rank(container)
+    return [mastery, weapon_type, max_rank, slot]
 
 
-def _generateWeaponDetails(name, soup) -> Weapon:
-    regTable = soup.find(name="table", class_="acquisition-table")
-    acqTable = []
+def get_weapon_details(weapon_name, body) -> Weapon:
+    """Generate weapon details from the HTML table."""
+    reg_table = body.find("table",{"class": "foundrytable"})
+    acq_table = []
 
-    if regTable:
-        acqRows = soup.find(name="table", class_="acquisition-table").find_next(name="tbody").find_all(name="tr")
-        acqTable = _getAcquisitionRows(acqRows)
-    elif "Prime" in name:
-        acqTable = _getAcquisitionPrimeGrid(soup)
+    if reg_table:
+        acq_rows = body.find("table",{"class": "foundrytable"}).find_next("tbody").find_all("tr")
+        acq_table = get_acquisition_rows(acq_rows)
+    elif "Prime" in weapon_name:
+        acq_table = get_acquisition_prime_grid(body)
     else:
         print("NO ROWS")
     
-    acqText = _getAcquisitionText(soup)
-    foundryTable = _getFoundryTable(soup)
-    generalInfo = soup.find(name="aside", class_="portable-infobox")
-    [mastery, type, maxRank, slot] = _getGeneralInformation(generalInfo)
+    acq_text = get_acquisition_text(body)
+    foundry_table = get_foundry_table(body)
+    general_info = body.find("div", {"class": "infobox"})
+    [mastery, weapon_type, max_rank, slot] = get_general_information(general_info)
     
-    newWep = Weapon(name, mastery, type, maxRank, slot, acqText, acqTable, foundryTable)
-    return newWep
+    new_wep = Weapon(weapon_name, mastery, weapon_type, max_rank, slot, acq_text, acq_table, foundry_table)
+    return new_wep
+
+def send_request(weapon_name: str) -> BeautifulSoup:
+    """Send a request to the Warframe Wiki and return the BeautifulSoup object."""
+    url = "https://wiki.warframe.com/w/" + weapon_name
+    r = requests.get(url, timeout=10)
+    response = BeautifulSoup(r.text, 'html.parser')
+    return response
 
 def main():
-    z = open("../lists/weapons_list.txt")
-    f = open("../data/weapons.json", "w")
-    weaponList = list(z.read().split(","))
-    weaponJSON = {"weapons" : []}
-    for i in range(0, 3):
-        w = weaponList[i]
-        print(w)
-        r = requests.get('https://warframe.fandom.com/wiki/' + w)
-        soup = BeautifulSoup(r.content, 'html.parser')
-        try:
-            newWep = _generateWeaponDetails(w, soup)
-            jsonDump = json.dumps(vars(newWep))
-            weaponJSON["weapons"].append(jsonDump)
-            print(jsonDump)
-        except Exception as error:
-            print("GOOFED: ", error)
-            continue
-    
-    f.write(json.dumps(weaponJSON))
-    z.close()
-    f.close()
+    """Main function to scrape weapon data and generate JSON output file."""
+    with open("../lists/weapons_list.txt", encoding='utf-8') as z:
+        with open("../data/weapons.json", "w", encoding='utf-8') as f:
+            weapon_list = list(z.read().split(","))
+            weapon_json = {"weapons" : []}
+            for i in range(1, 2):
+                weapon_name = weapon_list[i]
+                print(weapon_name)
+                try:
+                    r = send_request(weapon_name)
+                    new_wep = get_weapon_details(weapon_name, r)
+                    json_dump = json.loads(json.dumps(vars(new_wep)))
+                    
+                    weapon_json["weapons"].append(json_dump)
+                except Exception as error:
+                    print("GOOFED: ", error)
+                    continue
+            json.dump(weapon_json, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()

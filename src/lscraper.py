@@ -1,22 +1,24 @@
-import requests
-import re
-from bs4 import BeautifulSoup
-from collections import defaultdict
+"""Web scraper for extracting Warframe game data from the Warframe Wiki."""
 
-def _sendRequest(category: str) -> BeautifulSoup:
+import re
+import requests
+from bs4 import BeautifulSoup
+
+def send_request(category: str) -> BeautifulSoup:
+    """Send a request to the Warframe Wiki and return the BeautifulSoup object."""
     url = "https://warframe.fandom.com/wiki/" + category
-    r = requests.get(url)
+    r = requests.get(url, timeout=10)   
     response = BeautifulSoup(r.content, 'html.parser')
     return response
 
-def _writeFile(fileName, csv):
-    f = open(fileName, 'w')
-    f.write(csv)
-    f.close()
-    return
+def write_to_file(fileName: str, csv: str) -> None:
+    """Write the CSV data to a file."""
+    with open(fileName, 'w', encoding='utf-8') as f:
+        f.write(csv)
 
-def _scrapeWeapons() -> None:
-    response = _sendRequest("Weapons")
+def scrape_weapons() -> None:
+    """Scrape the weapons data from the Warframe Wiki."""
+    response = send_request("Weapons")
     arr = response.findAll(lambda tag: tag.name=='span' and tag.has_attr('data-param') and tag.has_attr("data-param2"))
 
     weapon_set = set()
@@ -27,40 +29,27 @@ def _scrapeWeapons() -> None:
             modded_val = re.sub(r'\(.*\)', '', item_val).strip()
             modded_val = modded_val.replace(" ", "_")
             weapon_set.add(modded_val)
-    
-    print(weapon_set)
-    print(len(weapon_set))
-
     weapons_arr = sorted(list(weapon_set))
     weapons_csv: str = ",".join(weapons_arr)
-    print(weapons_csv)
-    
-    _writeFile("../lists/weapons_list.txt", weapons_csv)
-    return
+    write_to_file("../lists/weapons_list.txt", weapons_csv)
 
-def _scrapeWarframes() -> None:
-    response = _sendRequest("Warframes")
+def scrape_warframes() -> None:
+    """Scrape the warframes data from the Warframe Wiki."""
+    response = send_request("Warframes")
     arr = response.findAll(name="div", class_="wds-is-current")
     a = []
     for i in arr:
         a = i.findAll(lambda tag: tag.name=='a' and tag.has_attr('title'))
-    
     frame_list = []
-    
     for elem in a:
         if "Update" not in elem['title']:
             frame = elem['title']
             frame = frame.replace(" ", "_").strip()
             frame_list.append(frame)
-    
-    print(frame_list)
     frame_list.sort()
     frames_csv = ",".join(frame_list)
-    
-    _writeFile("../lists/frames_list.txt", frames_csv)
-    return
+    write_to_file("../lists/frames_list.txt", frames_csv)
 
 if __name__ == "__main__":
-    _scrapeWeapons()
-    _scrapeWarframes()
-    
+    scrape_weapons()
+    scrape_warframes()
