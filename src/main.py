@@ -21,13 +21,17 @@ class Weapon:
 def get_acquisition_rows(arr):
     """Get acquisition rows from the HTML table."""
     res = []
-    for i in arr:
+    for table_row in arr:
         r = []
-        if i.find(name="th"):
+        if table_row.find(name="th"):
             continue
         else:
-            for j in i.find_all(name="td"):
-                r.append(j.get_text().replace("\\n", "").strip())
+            for idx, column_info in enumerate(table_row.find_all(name="td")):
+                if idx == 0:
+                    text = column_info.find("span", {"class": "hidden"}).next_sibling.getText().replace("\\n", "").strip()
+                else:
+                    text = column_info.getText().replace("\\n", "").strip()
+                r.append(text)
         res.append(r)
     return res
 
@@ -81,18 +85,19 @@ def get_foundry_table(soup):
         resource_list.append(resource)
     
     for idx, i in enumerate(table[1]):
-        text = i.get_text().strip()
+        text = i.getText().strip()
+        resource = ""
         if idx == 0:
             resource = "Credits"
         else: 
             resource = re.split(r"\d+", text)[0].replace(u'\xa0', u' ')
         
-        val = "".join(re.findall(r"(\d+)", text))
+        val = "".join(re.findall(r"(?<=})\d{1,3}(?:,\d{3})*", text))
 
         if not val:
             continue
             
-        resource_count.append(val)
+        resource_count.append(val.replace(",", ""))
 
     for i, elem in enumerate(resource_list):
         foundry_map[elem] = resource_count[i]
@@ -135,7 +140,7 @@ def get_weapon_details(weapon_name, body) -> Weapon:
     acq_table = []
 
     if reg_table:
-        acq_rows = body.find("table",{"class": "foundrytable"}).find_next("tbody").find_all("tr")
+        acq_rows = body.find("table",{"class": "acquisition-table"}).find_next("tbody").find_all("tr")
         acq_table = get_acquisition_rows(acq_rows)
     elif "Prime" in weapon_name:
         acq_table = get_acquisition_prime_grid(body)
@@ -170,7 +175,6 @@ def main():
                     r = send_request(weapon_name)
                     new_wep = get_weapon_details(weapon_name, r)
                     json_dump = json.loads(json.dumps(vars(new_wep)))
-                    
                     weapon_json["weapons"].append(json_dump)
                 except Exception as error:
                     print("GOOFED: ", error)
