@@ -151,16 +151,11 @@ def get_weapon_details(weapon_name, body) -> Weapon:
         acq_table = get_acquisition_prime_grid(body)
     else:
         print("NO ROWS")
-
-    # print("acq_table: ", acq_table)
     
     acq_text = get_acquisition_text(body)
-    # print("acq_text: ", acq_text)
     foundry_table = get_foundry_table(body)
-    # print("foundry_table: ", foundry_table)
     general_info = body.find("div", {"class": "infobox"})
     [mastery, weapon_type, max_rank, slot] = get_general_information(general_info)
-    # print("mastery: ", mastery, "weapon_type: ", weapon_type, "max_rank: ", max_rank, "slot: ", slot)
     new_wep = Weapon(weapon_name, mastery, weapon_type, max_rank, slot, acq_text, acq_table, foundry_table)
     return new_wep
 
