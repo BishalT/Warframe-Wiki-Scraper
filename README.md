@@ -1,4 +1,4 @@
-# Warframe Data Scraper
+# Warframe Wiki Scraper
 
 A Python script that scrapes detailed weapon information from the Warframe Wiki and generates structured JSON data.
 
